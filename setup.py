@@ -1,7 +1,7 @@
 import re
 import ast
 from setuptools import setup
-from ssoclient import __version__, __author__, __license__, __description__
+from flask_pluginkit_ssoclient import __version__, __author__, __license__, __description__
 
 def _get_author():
     mail_re = re.compile(r'(.*)\s<(.*)>')
