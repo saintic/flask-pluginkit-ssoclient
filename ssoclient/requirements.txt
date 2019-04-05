@@ -1,0 +1,3 @@
+Flask-PluginKit>=2.2.0
+SecureHTTP>=0.4.0
+requests
