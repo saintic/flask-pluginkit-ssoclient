@@ -51,20 +51,22 @@ __readme_file__ = "README.md"
 #: 插件状态, enabled、disabled, 默认enabled
 __state__       = "enabled"
 
-# 获取SSO服务端配置信息
-SSO = current_app.config["PLUGINKIT_SSO"]
-AESKEY = current_app.config["PLUGINKIT_AESKEY"]
-# 回调函数，原set_userinfo
-SETUSERINFO_CALLBACK = current_app.config["PLUGINKIT_SETUSERINFO_CALLBACK"]
-
-# 定义sso server地址并删除SSO多余参数
-sso_server = SSO.get("sso_server").strip("/")
-# 实例化sso工具类
-sso_util = SSOUtil(SSO, AESKEY)
+try:
+    # 获取SSO服务端配置信息
+    SSO = current_app.config["PLUGINKIT_SSO"]
+    AESKEY = current_app.config["PLUGINKIT_AESKEY"]
+    # 回调函数，原set_userinfo
+    SETUSERINFO_CALLBACK = current_app.config["PLUGINKIT_SETUSERINFO_CALLBACK"]
+    # 定义sso server地址并删除SSO多余参数
+    sso_server = SSO.get("sso_server").strip("/")
+    # 实例化sso工具类
+    sso_util = SSOUtil(SSO, AESKEY)
+except RuntimeError:
+    pass
 
 # 定义蓝图
-sso_blueprint = Blueprint("sso", "sso")
-@sso_blueprint.route("/Login")
+bp = Blueprint("sso", "sso")
+@bp.route("/Login")
 @anonymous_required
 def Login():
     """ Client登录地址，需要跳转到SSO Server上 """
@@ -74,14 +76,14 @@ def Login():
     else:
         return "Invalid Configuration"
 
-@sso_blueprint.route("/Logout")
+@bp.route("/Logout")
 @login_required
 def Logout():
     """ Client注销地址，需要跳转到SSO Server上 """
     ReturnUrl = request.args.get("ReturnUrl") or get_referrer_url() or url_for("front.index", _external=True)
     return redirect("{}/signOut?ReturnUrl={}".format(sso_server, ReturnUrl))
 
-@sso_blueprint.route("/authorized", methods=["GET", "POST"])
+@bp.route("/authorized", methods=["GET", "POST"])
 def authorized():
     """ Client SSO 单点登录、注销入口, 根据`Action`参数判断是`ssoLogin`还是`ssoLogout` """
     Action = request.args.get("Action")
@@ -150,5 +152,5 @@ class SSOClientMain(object):
 
     def register_bep(self):
         """注册蓝图入口, 返回蓝图路由前缀及蓝图名称"""
-        bep = {"prefix": "/sso", "blueprint": sso_blueprint}
+        bep = {"prefix": "/sso", "blueprint": bp}
         return bep
