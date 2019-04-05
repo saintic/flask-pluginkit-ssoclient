@@ -17,7 +17,7 @@ setup(
     url='https://github.com/saintic/flask-pluginkit-ssoclient',
     keywords="flask-pluginkit",
     description=__description__,
-    packages=['ssoclient',],
+    packages=['flask_pluginkit_ssoclient',],
     zip_safe=False,
     include_package_data=True,
     classifiers=[
