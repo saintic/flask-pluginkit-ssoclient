@@ -1,22 +1,32 @@
 import re
 import ast
 from setuptools import setup
-from flask_pluginkit_ssoclient import __version__, __author__, __license__, __description__
+
+
+def _get_meta(meta):
+    pat = re.compile(r'__%s__\s+=\s+(.*)' % meta)
+    with open('flask_pluginkit_ssoclient/__init__.py', 'rb') as fh:
+        meta_str = ast.literal_eval(pat.search(fh.read().decode('utf-8')).group(1))
+    return str(meta_str)
+
 
 def _get_author():
+    author_re = re.compile(r'__author__\s+=\s+(.*)')
     mail_re = re.compile(r'(.*)\s<(.*)>')
-    return (mail_re.search(__author__).group(1), mail_re.search(__author__).group(2))
+    author = _get_meta("author")
+    return (mail_re.search(author).group(1), mail_re.search(author).group(2))
+
 
 (author, email) = _get_author()
 setup(
     name='flask-pluginkit-ssoclient',
-    version=__version__,
-    license=__license__,
+    version=_get_meta("version"),
+    license=_get_meta("license"),
     author=author,
     author_email=email,
     url='https://github.com/saintic/flask-pluginkit-ssoclient',
     keywords="flask-pluginkit",
-    description=__description__,
+    description=_get_meta("description"),
     packages=['flask_pluginkit_ssoclient',],
     zip_safe=False,
     include_package_data=True,

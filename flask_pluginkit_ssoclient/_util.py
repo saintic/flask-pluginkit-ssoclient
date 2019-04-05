@@ -16,7 +16,7 @@ import hashlib
 import logging
 import requests
 from functools import wraps
-from SecureHTTP import AESEncrypt
+from SecureHTTP import AESEncrypt, AESDecrypt
 from flask_pluginkit import string_types
 from flask import g, request, redirect, url_for
 from ._jwt import JWTUtil, JWTException
@@ -27,10 +27,10 @@ comma_pat = re.compile(r"\s*,\s*")
 
 class SSOUtil(object):
 
-    def __init__(self, SSO_CONF=dict(), AES_KEY="d1d5eb327d55d83eb96ead9cdd1394e8"):
+    def __init__(self, SSO_CONF, AES_KEY):
         self._SSO_DATA = SSO_CONF
         self._AES_KEY = AES_KEY
-        self._jwt = JWTUtil()
+        self._jwt = JWTUtil(AES_KEY)
 
     def set_ssoparam(self, ReturnUrl="/"):
         """生成sso请求参数，5min过期"""
@@ -77,6 +77,43 @@ class SSOUtil(object):
     def hmac_sha256(self, message):
         """HMAC SHA256 Signature"""
         return hmac.new(key=self._AES_KEY, msg=message, digestmod=hashlib.sha256).hexdigest()
+
+    def verify_sessionId(self, cookie):
+        """验证cookie"""
+        try:
+            sessionId = AESDecrypt(self._AES_KEY, cookie, input="hex")
+        except Exception as e:
+            logger.debug(e)
+        else:
+            try:
+                success = self._jwt.verifyJWT(sessionId)
+            except JWTException, e:
+                logger.debug(e)
+            else:
+                # 验证token无误即设置登录态，所以确保解密、验证两处key切不可丢失，否则随意伪造！
+                return success
+        return False
+
+    def analysis_sessionId(self, cookie, ReturnType="dict"):
+        """分析获取cookie中payload数据"""
+        data = dict()
+        try:
+            sessionId = AESDecrypt(self._AES_KEY, cookie, input="hex")
+        except Exception, e:
+            logger.debug(e)
+        else:
+            try:
+                success = self._jwt.verifyJWT(sessionId)
+            except JWTException as e:
+                logger.debug(e)
+            else:
+                if success:
+                    # 验证token无误即设置登录态，所以确保解密、验证两处key切不可丢失，否则随意伪造！
+                    data = self._jwt.analysisJWT(sessionId)["payload"]
+        if ReturnType == "dict":
+            return data
+        else:
+            return data.get("sid"), data.get("uid")
 
 
 def login_required(f):

@@ -51,7 +51,11 @@ __readme_file__ = "README.md"
 #: 插件状态, enabled、disabled, 默认enabled
 __state__       = "enabled"
 
-try:
+
+# 定义蓝图
+bp = Blueprint("sso", "sso")
+@bp.before_request
+def _get_sso_config():
     # 获取SSO服务端配置信息
     SSO = current_app.config["PLUGINKIT_SSO"]
     AESKEY = current_app.config["PLUGINKIT_AESKEY"]
@@ -61,11 +65,8 @@ try:
     sso_server = SSO.get("sso_server").strip("/")
     # 实例化sso工具类
     sso_util = SSOUtil(SSO, AESKEY)
-except RuntimeError:
-    pass
 
-# 定义蓝图
-bp = Blueprint("sso", "sso")
+
 @bp.route("/Login")
 @anonymous_required
 def Login():
@@ -149,6 +150,12 @@ def getPluginClass():
 
 #: 插件主类, 不强制要求名称与插件名一致, 保证getPluginClass准确返回此类
 class SSOClientMain(object):
+
+    def run(self):
+        current_app.plugin_manager.sso_util = dict(
+            verify_sessionId=sso_util.verify_sessionId,
+            analysis_sessionId=sso_util.analysis_sessionId
+        )
 
     def register_bep(self):
         """注册蓝图入口, 返回蓝图路由前缀及蓝图名称"""
