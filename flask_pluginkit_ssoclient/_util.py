@@ -27,10 +27,10 @@ comma_pat = re.compile(r"\s*,\s*")
 
 class SSOUtil(object):
 
-    def __init__(self, SSO_CONF, AES_KEY):
+    def __init__(self, SSO_CONF):
         self._SSO_DATA = SSO_CONF
-        self._AES_KEY = AES_KEY
-        self._jwt = JWTUtil(AES_KEY)
+        self._AES_KEY = self._SSO_DATA["secret_key"]
+        self._jwt = JWTUtil(self._AES_KEY)
 
     def set_ssoparam(self, ReturnUrl="/"):
         """生成sso请求参数，5min过期"""

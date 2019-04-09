@@ -3,12 +3,14 @@
     flask-pluginkit-ssoclient
     ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    SSO Client, ask app config::
+    SSO Client of Passport.
 
-        app.config.update(
-            PLUGINKIT_SSO = SSO_CONFIG,
-            PLUGINKIT_AESKEY = AES_KEY
-        )
+    You should have a config.py and SSO in it.
+
+    In app::
+
+        # set_userinfo is a func.
+        app.config["PLUGINKIT_SETUSERINFO_CALLBACK"] = set_userinfo
 
     :copyright: (c) 2019 by staugur.
     :license: BSD, see LICENSE for more details.
@@ -21,6 +23,7 @@ from __future__ import absolute_import
 #: 在这里导入其他模块, 如果有自定义包目录, 使用相对导入, 如: from .lib import Lib
 import json
 from flask import current_app, Blueprint, request, jsonify, g, redirect, url_for, make_response
+from flask_pluginkit import PluginError
 from ._util import SSOUtil, login_required, anonymous_required, get_redirect_url, get_referrer_url, sso_request, url_check, logger
 
 #：Your plugin name
@@ -51,22 +54,21 @@ __readme_file__ = "README.md"
 #: 插件状态, enabled、disabled, 默认enabled
 __state__       = "enabled"
 
+try:
+    #: 获取SSO服务端配置信息
+    from config import SSO
+except ImportError:
+    raise PluginError("Insufficient plugin configuration for %s" %__plugin_name__)
+else:
+    if "sso_server" in SSO and "app_name" in SSO and "app_id" in SSO and "app_secret" in SSO and "secret_key" in SSO:
+        # 定义sso server地址并删除SSO多余参数
+        sso_server = SSO.get("sso_server").strip("/")
+        # 实例化sso工具类
+        sso_util = SSOUtil(SSO)
+    else:
+        raise PluginError("Insufficient plugin configuration for %s" %__plugin_name__)
 
-# 定义蓝图
-bp = Blueprint("sso", "sso")
-@bp.before_request
-def _get_sso_config():
-    # 获取SSO服务端配置信息
-    SSO = current_app.config["PLUGINKIT_SSO"]
-    AESKEY = current_app.config["PLUGINKIT_AESKEY"]
-    # 回调函数，原set_userinfo
-    SETUSERINFO_CALLBACK = current_app.config["PLUGINKIT_SETUSERINFO_CALLBACK"]
-    # 定义sso server地址并删除SSO多余参数
-    sso_server = SSO.get("sso_server").strip("/")
-    # 实例化sso工具类
-    sso_util = SSOUtil(SSO, AESKEY)
-
-
+bp = Blueprint("sso","sso")
 @bp.route("/Login")
 @anonymous_required
 def Login():
@@ -103,7 +105,10 @@ def authorized():
                     if sso_util.is_allowUid(uid) is True:
                         # 获取用户信息，若不需要，可将get_userinfo=True改为False，并注释下两行
                         g.userinfo = resp["userinfo"].get("data") or dict()
-                        SETUSERINFO_CALLBACK(uid, g.userinfo, expire)
+                        # 回调函数，原set_userinfo
+                        SETUSERINFO_CALLBACK = current_app.config.get("PLUGINKIT_SETUSERINFO_CALLBACK") or current_app.extensions["pluginkit"].get_config.get("SETUSERINFO_CALLBACK")
+                        if SETUSERINFO_CALLBACK:
+                            SETUSERINFO_CALLBACK(uid, g.userinfo, expire)
                         logger.debug(g.userinfo)
                         # 授权令牌验证通过，设置局部会话，允许登录
                         sessionId = sso_util.set_sessionId(uid=uid, seconds=expire, sid=sid)
@@ -141,7 +146,13 @@ def authorized():
                         g.userinfo.update(cd)
                     elif ct == "user_avatar":
                         g.userinfo["avatar"] = cd
-                    return jsonify(msg="Synchronization completed", success=SETUSERINFO_CALLBACK(uid, g.userinfo), app_name=SSO["app_name"])
+                    # 回调函数，原set_userinfo
+                    SETUSERINFO_CALLBACK = current_app.config.get("PLUGINKIT_SETUSERINFO_CALLBACK") or current_app.extensions["pluginkit"].get_config.get("SETUSERINFO_CALLBACK")
+                    if SETUSERINFO_CALLBACK:
+                        success = SETUSERINFO_CALLBACK(uid, g.userinfo)
+                    else:
+                        success = "No set userinfo callback"
+                    return jsonify(msg="Synchronization completed", success=success, app_name=SSO["app_name"])
     return "Invalid Authorized"
 
 #: 返回插件主类
@@ -151,11 +162,8 @@ def getPluginClass():
 #: 插件主类, 不强制要求名称与插件名一致, 保证getPluginClass准确返回此类
 class SSOClientMain(object):
 
-    def run(self):
-        current_app.plugin_manager.sso_util = dict(
-            verify_sessionId=sso_util.verify_sessionId,
-            analysis_sessionId=sso_util.analysis_sessionId
-        )
+    def register_dfp(self):
+        return dict(verify_sessionId=sso_util.verify_sessionId, analysis_sessionId=sso_util.analysis_sessionId)
 
     def register_bep(self):
         """注册蓝图入口, 返回蓝图路由前缀及蓝图名称"""

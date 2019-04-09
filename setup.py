@@ -11,7 +11,6 @@ def _get_meta(meta):
 
 
 def _get_author():
-    author_re = re.compile(r'__author__\s+=\s+(.*)')
     mail_re = re.compile(r'(.*)\s<(.*)>')
     author = _get_meta("author")
     return (mail_re.search(author).group(1), mail_re.search(author).group(2))
@@ -30,15 +29,17 @@ setup(
     packages=['flask_pluginkit_ssoclient',],
     zip_safe=False,
     include_package_data=True,
+    install_requires=[
+        'Flask-PluginKit>=2.3.1',
+        'SecureHTTP>=0.4.0',
+        'requests'
+    ],
     classifiers=[
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
