@@ -30,7 +30,7 @@ setup(
     zip_safe=False,
     include_package_data=True,
     install_requires=[
-        'Flask-PluginKit>=2.3.1',
+        'Flask-PluginKit>=2.3.2',
         'SecureHTTP>=0.4.0',
         'requests'
     ],
@@ -41,7 +41,6 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: Implementation :: CPython',
-        'Programming Language :: Python :: Implementation :: PyPy',
         'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
         'Topic :: Software Development :: Libraries :: Python Modules'
     ]

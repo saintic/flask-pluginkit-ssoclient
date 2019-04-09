@@ -73,7 +73,7 @@ bp = Blueprint("sso","sso")
 @anonymous_required
 def Login():
     """ Client登录地址，需要跳转到SSO Server上 """
-    ReturnUrl = request.args.get("ReturnUrl") or get_referrer_url() or url_for("front.index", _external=True)
+    ReturnUrl = request.args.get("ReturnUrl") or get_referrer_url() or  request.url_root
     if url_check(sso_server):
         return redirect("{}/sso/?sso={}".format(sso_server, sso_util.set_ssoparam(ReturnUrl)))
     else:
@@ -83,7 +83,7 @@ def Login():
 @login_required
 def Logout():
     """ Client注销地址，需要跳转到SSO Server上 """
-    ReturnUrl = request.args.get("ReturnUrl") or get_referrer_url() or url_for("front.index", _external=True)
+    ReturnUrl = request.args.get("ReturnUrl") or get_referrer_url() or  request.url_root
     return redirect("{}/signOut?ReturnUrl={}".format(sso_server, ReturnUrl))
 
 @bp.route("/authorized", methods=["GET", "POST"])
@@ -117,7 +117,7 @@ def authorized():
                         return response
     elif Action == "ssoLogout":
         # 单点注销
-        ReturnUrl = request.args.get("ReturnUrl") or get_referrer_url() or url_for("front.index", _external=True)
+        ReturnUrl = request.args.get("ReturnUrl") or get_referrer_url() or  request.url_root
         NextUrl   = "{}/signOut?ReturnUrl={}".format(sso_server, ReturnUrl)
         app_name  = request.args.get("app_name")
         if request.method == "GET" and NextUrl and app_name and g.signin == True and app_name == SSO["app_name"]:
@@ -134,7 +134,7 @@ def authorized():
                 cd = data["CallbackData"]
                 uid = data["uid"]
                 token = data["token"]
-            except Exception,e:
+            except Exception as e:
                 logger.warning(e)
             else:
                 logger.info("ssoConSync with uid: {} -> {}: {}".format(uid, ct, cd))
@@ -162,10 +162,20 @@ def getPluginClass():
 #: 插件主类, 不强制要求名称与插件名一致, 保证getPluginClass准确返回此类
 class SSOClientMain(object):
 
-    def register_dfp(self):
-        return dict(verify_sessionId=sso_util.verify_sessionId, analysis_sessionId=sso_util.analysis_sessionId)
+    def _check_login_state(self):
+        if not hasattr(g, "signin"):
+            g.signin = None
+        if not g.signin:
+            # 登录状态标记，True表示已登录，False表示未登录
+            g.signin = sso_util.verify_sessionId(request.cookies.get("sessionId"))
+        # sessionId和userId
+        g.sid, g.uid = sso_util.analysis_sessionId(request.cookies.get("sessionId"), "tuple") if g.signin else (None, None)
 
     def register_bep(self):
         """注册蓝图入口, 返回蓝图路由前缀及蓝图名称"""
         bep = {"prefix": "/sso", "blueprint": bp}
         return bep
+
+    def register_hep(self):
+        hep = dict(before_request_top_hook=self._check_login_state)
+        return hep
