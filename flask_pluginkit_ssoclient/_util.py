@@ -29,21 +29,21 @@ class SSOUtil(object):
 
     def __init__(self, SSO_CONF):
         self._SSO_DATA = SSO_CONF
-        self._AES_KEY = self._SSO_DATA["secret_key"]
-        self._jwt = JWTUtil(self._AES_KEY)
+        self._SECRET_KEY = self._SSO_DATA["app_secret"][:32]
+        self._jwt = JWTUtil(self._SECRET_KEY)
 
     def set_ssoparam(self, ReturnUrl="/"):
         """生成sso请求参数，5min过期"""
         app_name = self._SSO_DATA.get("app_name")
         app_id = self._SSO_DATA.get("app_id")
         app_secret = self._SSO_DATA.get("app_secret")
-        return AESEncrypt(self._AES_KEY, self._jwt.createJWT(payload=dict(app_name=app_name, app_id=app_id, app_secret=app_secret, ReturnUrl=ReturnUrl), expiredSeconds=300), output="hex")
+        return self._jwt.createJWT(payload=dict(app_name=app_name, app_id=app_id, app_secret=app_secret, ReturnUrl=ReturnUrl), expiredSeconds=300)
 
     def set_sessionId(self, uid, seconds=43200, sid=None):
         """设置cookie"""
         payload = dict(uid=uid, sid=sid) if sid else dict(uid=uid)
         sessionId = self._jwt.createJWT(payload=payload, expiredSeconds=seconds)
-        return AESEncrypt(self._AES_KEY, sessionId, output="hex")
+        return AESEncrypt(self._SECRET_KEY, sessionId, output="hex")
 
     def allow_uids(self):
         """解析允许登录的uid列表"""
@@ -76,12 +76,12 @@ class SSOUtil(object):
 
     def hmac_sha256(self, message):
         """HMAC SHA256 Signature"""
-        return hmac.new(key=self._AES_KEY, msg=message, digestmod=hashlib.sha256).hexdigest()
+        return hmac.new(key=self._SECRET_KEY, msg=message, digestmod=hashlib.sha256).hexdigest()
 
     def verify_sessionId(self, cookie):
         """验证cookie"""
         try:
-            sessionId = AESDecrypt(self._AES_KEY, cookie, input="hex")
+            sessionId = AESDecrypt(self._SECRET_KEY, cookie, input="hex")
         except Exception as e:
             logger.debug(e)
         else:
@@ -98,7 +98,7 @@ class SSOUtil(object):
         """分析获取cookie中payload数据"""
         data = dict()
         try:
-            sessionId = AESDecrypt(self._AES_KEY, cookie, input="hex")
+            sessionId = AESDecrypt(self._SECRET_KEY, cookie, input="hex")
         except Exception, e:
             logger.debug(e)
         else:

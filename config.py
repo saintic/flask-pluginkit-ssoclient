@@ -36,7 +36,7 @@ SSO = {
     # Passport应用管理中注册返回的`app_id`
 
     "app_secret": getenv("xxx_sso_app_secret", "app_secret"),
-    # Passport应用管理中注册返回的`app_secret`
+    # Passport应用管理中注册返回的`app_secret`，用于AES、JWT、HMAC等加密
 
     "sso_server": getenv("xxx_sso_server", "YourPassportFQDN"),
     # Passport部署允许的完全合格域名根地址，例如作者的`https://passport.saintic.com`
@@ -46,6 +46,4 @@ SSO = {
 
     "sso_deny": getenv("xxx_sso_deny"),
     # 拒绝登录的uid列表, 格式同上
-
-    "secret_key": getenv("xxx_aes_key", "YRRGBRYQqrV1gv5A")
 }

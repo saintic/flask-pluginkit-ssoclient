@@ -60,7 +60,7 @@ try:
 except ImportError:
     raise PluginError("Insufficient plugin configuration for %s" %__plugin_name__)
 else:
-    if "sso_server" in SSO and "app_name" in SSO and "app_id" in SSO and "app_secret" in SSO and "secret_key" in SSO:
+    if "sso_server" in SSO and "app_name" in SSO and "app_id" in SSO and "app_secret" in SSO:
         # 定义sso server地址并删除SSO多余参数
         sso_server = SSO.get("sso_server").strip("/")
         # 实例化sso工具类
