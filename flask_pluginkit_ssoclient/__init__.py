@@ -179,3 +179,11 @@ class SSOClientMain(object):
     def register_hep(self):
         hep = dict(before_request_top_hook=self._check_login_state)
         return hep
+
+def register():
+    scm = SSOClientMain()
+    return dict(
+        bep=scm.register_bep(),
+        hep=dict(before_request=scm._check_login_state
+    )
+
